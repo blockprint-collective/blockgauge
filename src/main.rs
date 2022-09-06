@@ -39,7 +39,7 @@ async fn classify(
 
     if !block_rewards_res.status().is_success() {
         return Err(format!(
-            "error from Lighthouse block_rewards: {}",
+            "error from Lighthouse: {}",
             block_rewards_res
                 .text()
                 .await
@@ -64,7 +64,7 @@ async fn classify(
 
     if !classifications_res.status().is_success() {
         return Err(format!(
-            "[{{\"message\": \"error from blockprint block_rewards: {}\"}}]",
+            "error from blockprint: {}",
             classifications_res
                 .text()
                 .await
@@ -79,7 +79,6 @@ async fn classify(
         .map_err(|e| format!("invalid JSON from blockprint: {e}"))?;
 
     // Record blockprint's accuracy.
-    println!("updating accuracy");
     let mut tracker_guard = tracker.write().await;
     for ((id, true_label), classified_as) in request
         .names
@@ -120,7 +119,7 @@ async fn main() {
         .layer(Extension(tracker))
         .layer(Extension(conf));
 
-    axum::Server::bind(&"0.0.0.0:8001".parse().unwrap())
+    axum::Server::bind(&"127.0.0.1:8001".parse().unwrap())
         .serve(app.into_make_service())
         .await
         .unwrap();
