@@ -1,5 +1,5 @@
 use crate::{
-    accuracy::AccuracyTracker,
+    accuracy::{AccuracyTracker, Summary},
     classify::{BlockprintClassification, ClassifyRequest},
     config::Config,
 };
@@ -80,13 +80,13 @@ async fn classify(
 
     // Record blockprint's accuracy.
     let mut tracker_guard = tracker.write().await;
-    for ((id, true_label), classified_as) in request
+    for ((id, true_label), (classified_as, block)) in request
         .names
         .into_iter()
         .zip(request.labels)
-        .zip(classifications)
+        .zip(classifications.into_iter().zip(request.blocks.iter()))
     {
-        tracker_guard.record_block(id, true_label, classified_as.best_guess_single);
+        tracker_guard.record_block(id, true_label, classified_as.best_guess_single, block.slot);
     }
 
     // Return the unmodified block rewards.
@@ -97,15 +97,19 @@ async fn classify(
 /// Return statistics about classified blocks.
 async fn accuracy(
     Extension(tracker): Extension<Arc<RwLock<AccuracyTracker>>>,
-) -> Json<AccuracyTracker> {
-    Json(tracker.read().await.clone())
+) -> Result<Json<Summary>> {
+    if let Some(summary) = tracker.read().await.summarise() {
+        Ok(Json(summary))
+    } else {
+        Err("error computing accuracy".into())
+    }
 }
 
 #[tokio::main]
 async fn main() {
     let conf = Arc::new(Config {
         lighthouse_url: "http://localhost:5052".into(),
-        blockprint_url: "http://localhost:8000".into(),
+        blockprint_url: "http://localhost:8001".into(),
     });
 
     let http_client = Client::new();
@@ -119,7 +123,7 @@ async fn main() {
         .layer(Extension(tracker))
         .layer(Extension(conf));
 
-    axum::Server::bind(&"127.0.0.1:8001".parse().unwrap())
+    axum::Server::bind(&"127.0.0.1:8002".parse().unwrap())
         .serve(app.into_make_service())
         .await
         .unwrap();
