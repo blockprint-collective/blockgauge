@@ -109,7 +109,7 @@ async fn accuracy(
 async fn main() {
     let conf = Arc::new(Config {
         lighthouse_url: "http://localhost:5052".into(),
-        blockprint_url: "http://localhost:8001".into(),
+        blockprint_url: "http://localhost:8000".into(),
     });
 
     let http_client = Client::new();
