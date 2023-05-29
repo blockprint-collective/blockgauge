@@ -39,8 +39,8 @@ struct AggregateSummary {
     true_positives: usize,
     true_negatives: usize,
     false_positives: usize,
-    false_negatives: FalseNegatives,
-    total_false_negatives: usize,
+    false_negatives: usize,
+    false_negatives_detail: FalseNegatives,
 }
 
 #[derive(Clone, Default, Deserialize, Serialize)]
@@ -129,9 +129,10 @@ impl AccuracyTracker {
                 // Update false negative count for client1.
                 let client1_summary = clients.entry(client1.clone()).or_default();
                 *client1_summary
-                    .false_negatives
+                    .false_negatives_detail
                     .entry(client2.clone())
                     .or_default() += *count;
+                client1_summary.false_negatives += *count;
 
                 // Update false positive count for client2.
                 let client2_summary = clients.entry(client2.clone()).or_default();
@@ -153,7 +154,7 @@ impl AccuracyTracker {
                 // Every misclassification of client2 as client3 (!= client1) is a true negative
                 // for client1.
                 num_true_negatives += summary2
-                    .false_negatives
+                    .false_negatives_detail
                     .iter()
                     .filter(|(client3, _)| *client3 != client1)
                     .map(|(_, count)| count)
