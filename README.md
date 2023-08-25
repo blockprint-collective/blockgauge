@@ -3,7 +3,7 @@ blockgauge
 
 This is a microservice to accompany [blockprint][] and [blockdreamer][].
 
-The aim of the gauge is measure `blockprint`'s accuracy live using synthetic blocks from
+The aim of the gauge is to measure `blockprint`'s accuracy live using synthetic blocks from
 `blockdreamer`. It does this by receiving blocks from `blockdreamer` via `POST /classify`, and then
 preparing and sending them to `blockprint` for classification. The classifications are then
 compared to the known identities of the nodes, recorded by the gauge and served on the

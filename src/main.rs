@@ -9,8 +9,10 @@ use axum::{
     routing::{get, post},
     Extension, Router,
 };
+use clap::Parser;
 use reqwest::Client;
 use serde_json::Value;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -107,10 +109,8 @@ async fn accuracy(
 
 #[tokio::main]
 async fn main() {
-    let conf = Arc::new(Config {
-        lighthouse_url: "http://localhost:5052".into(),
-        blockprint_url: "http://localhost:8000".into(),
-    });
+    let conf = Arc::new(Config::parse());
+    eprintln!("Starting up with config: {conf:#?}");
 
     let http_client = Client::new();
 
@@ -121,9 +121,10 @@ async fn main() {
         .route("/accuracy", get(accuracy))
         .layer(Extension(http_client))
         .layer(Extension(tracker))
-        .layer(Extension(conf));
+        .layer(Extension(conf.clone()));
 
-    axum::Server::bind(&"127.0.0.1:8002".parse().unwrap())
+    let socket_addr = SocketAddr::new(conf.listen_address.clone(), conf.port);
+    axum::Server::bind(&socket_addr)
         .serve(app.into_make_service())
         .await
         .unwrap();
