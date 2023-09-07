@@ -30,6 +30,9 @@ jobs:
     build-docker-single-arch:
         name: build-docker-x86_64
         runs-on: ubuntu-22.04
+        permissions:
+          contents: read
+          packages: write
 
         needs: [extract-version]
         env:
