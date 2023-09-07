@@ -42,7 +42,7 @@ jobs:
             - uses: docker/setup-qemu-action@v2
             - name: Dockerhub login
               run: |
-                  echo "${ secrets.GITHUB_TOKEN }" | docker login ghcr.io --username ${ github.repository_owner} --password-stdin
+                  echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io --username "${{ github.repository_owner }}" --password-stdin
             - name: Map x86_64 to amd64 short arch
               run: echo "SHORT_ARCH=amd64" >> $GITHUB_ENV;
             - name: Build Dockerfile and push
