@@ -41,28 +41,9 @@ Options:
   -V, --version               Print version
 ```
 
-## Example Response
+## Response Structure
 
-Example accuracy data from `/accuracy` is:
-
-```json
-{
-  "Lighthouse": {
-    "num_blocks": 53,
-    "num_correct": 53,
-    "misclassifications": {}
-  },
-  "Nimbus": {
-    "num_blocks": 53,
-    "num_correct": 47,
-    "misclassifications": {
-      "nimbus-subscribe-none": {
-        "Teku": 6
-      }
-    }
-  }
-}
-```
+See an example response on https://api.blockprint.sigp.io/confusion
 
 [blockprint]: https://github.com/sigp/blockprint
 [blockdreamer]: https://github.com/blockprint-collective/blockdreamer
