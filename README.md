@@ -41,6 +41,11 @@ Options:
   -V, --version               Print version
 ```
 
+## API endpoints
+
+- `POST /classify`: accept a JSON `ClassifyRequest` containing blocks to classify.
+- `GET /accuracy`: return a JSON `Summary` containing information about the classified blocks.
+
 ## Response Structure
 
 See an example response on https://api.blockprint.sigp.io/confusion
