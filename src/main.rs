@@ -123,9 +123,16 @@ async fn main() {
         .layer(Extension(tracker))
         .layer(Extension(conf.clone()));
 
-    let socket_addr = SocketAddr::new(conf.listen_address.clone(), conf.port);
-    axum::Server::bind(&socket_addr)
-        .serve(app.into_make_service())
+    let service = app.into_make_service();
+
+    let bind_futures = conf.listen_address.iter().map(|listen_address| {
+        let socket_addr = SocketAddr::new(listen_address.clone(), conf.port);
+        axum::Server::bind(&socket_addr).serve(service.clone())
+    });
+
+    futures::future::join_all(bind_futures)
         .await
-        .unwrap();
+        .into_iter()
+        .map(Result::unwrap)
+        .for_each(drop);
 }
