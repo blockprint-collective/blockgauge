@@ -15,7 +15,7 @@ pub struct Config {
 
     /// Address to listen on.
     #[arg(long, value_name = "IP", default_value = "127.0.0.1")]
-    pub listen_address: IpAddr,
+    pub listen_address: Vec<IpAddr>,
 
     /// Port to listen on.
     #[arg(long, value_name = "N", default_value = "8002")]
