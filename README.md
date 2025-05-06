@@ -69,8 +69,13 @@ For example:
     "blocks": [
         {
             "slot": "123",
-            "proposer_index":
+            "proposer_index": "0"
+        },
+        {
+            "slot": "123",
+            "proposer_index": "0"
         }
+    ]
 }
 ```
 
