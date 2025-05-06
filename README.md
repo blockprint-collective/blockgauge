@@ -43,8 +43,52 @@ Options:
 
 ## API endpoints
 
-- `POST /classify`: accept a JSON `ClassifyRequest` containing blocks to classify.
-- `GET /accuracy`: return a JSON `Summary` containing information about the classified blocks.
+### `POST /classify`
+
+This API endpoint is for submitting blocks for classification. They will be recorded
+in-memory by blockgauge, which then serves accuracy data on `/accuracy` (see below). If you are
+using `blockdreamer`, it automatically sends data in `blockgauge`'s format when using the setting
+`extra_data = true`.
+
+If you would like to make your own requests to this endpoint, the data structure is:
+
+```
+{
+    "names": [string],
+    "labels": [string],
+    "blocks": [BeaconBlock]
+}
+```
+
+For example:
+
+```json
+{
+    "names": ["lighthouse-node-1", "teku-node-1"],
+    "labels": ["Lighthouse", "Teku"],
+    "blocks": [
+        {
+            "slot": "123",
+            "proposer_index":
+        }
+}
+```
+
+The contents of the `BeaconBlock` can be mostly garbage, blockprint only really cares about the
+contained attestations. However, all `BeaconBlock` fields must be present.
+
+This corresponds to the `ClassifyRequest` struct in blockdreamer's code.
+
+Response:
+
+- On success: HTTP 200 OK with JSON data from Lighthouse's `POST /lighthouse/analysis/block_rewards` API.
+  You can save this data on disk for training a `blockprint` classifier. Blockdreamer comes with a
+  configuration option to do this for you (`results_dir = "/path/"`).
+- On failure: error status code.
+
+### `GET /accuracy`
+
+Return a JSON `Summary` (see code) containing information about the classified blocks.
 
 ## Response Structure
 
