@@ -95,9 +95,7 @@ Response:
 
 Return a JSON `Summary` (see code) containing information about the classified blocks.
 
-## Response Structure
-
-See an example response on https://api.blockprint.sigp.io/confusion
+See an example response on https://api.blockprint.sigp.io/accuracy
 
 [blockprint]: https://github.com/sigp/blockprint
 [blockdreamer]: https://github.com/blockprint-collective/blockdreamer
