@@ -144,7 +144,7 @@ async fn main() {
     let bind_futures = conf.listen_address.iter().map(|listen_address| async {
         let socket_addr = SocketAddr::new(listen_address.clone(), conf.port);
         let listener = TcpListener::bind(socket_addr).await?;
-        Ok::<_, std::io::Error>(axum::serve(listener, app.clone()))
+        axum::serve(listener, app.clone()).await
     });
 
     futures::future::join_all(bind_futures)
