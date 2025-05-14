@@ -5,7 +5,8 @@ use crate::{
 };
 use axum::{
     extract::Json,
-    response::Result,
+    http::StatusCode,
+    response::{IntoResponse, Response},
     routing::{get, post},
     Extension, Router,
 };
@@ -14,19 +15,39 @@ use reqwest::Client;
 use serde_json::Value;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::{net::TcpListener, sync::RwLock};
 
 mod accuracy;
 mod classify;
 mod config;
 
+pub struct Error {
+    code: StatusCode,
+    message: String,
+}
+
+impl Error {
+    pub fn server_error(message: String) -> Self {
+        Error {
+            code: StatusCode::INTERNAL_SERVER_ERROR,
+            message,
+        }
+    }
+}
+
+impl IntoResponse for Error {
+    fn into_response(self) -> Response {
+        (self.code, self.message).into_response()
+    }
+}
+
 /// Classify new blocks from blockdreamer and record them for future calls to `/accuracy`.
 async fn classify(
-    Json(request): Json<ClassifyRequest>,
     Extension(client): Extension<Client>,
     Extension(tracker): Extension<Arc<RwLock<AccuracyTracker>>>,
     Extension(conf): Extension<Arc<Config>>,
-) -> Result<Json<Vec<Value>>> {
+    Json(request): Json<ClassifyRequest>,
+) -> Result<Json<Vec<Value>>, Error> {
     // Send blocks to Lighthouse.
     println!("posting blocks to Lighthouse");
     let block_rewards_res = client
@@ -37,23 +58,21 @@ async fn classify(
         .json(&request.blocks)
         .send()
         .await
-        .map_err(|e| format!("Lighthouse POST error: {e}"))?;
+        .map_err(|e| Error::server_error(format!("Lighthouse POST error: {e}")))?;
 
     if !block_rewards_res.status().is_success() {
-        return Err(format!(
+        return Err(Error::server_error(format!(
             "error from Lighthouse: {}",
             block_rewards_res
                 .text()
                 .await
                 .unwrap_or_else(|_| "<body garbled>".into())
-        )
-        .into());
+        )));
     }
 
-    let block_rewards: Vec<Value> = block_rewards_res
-        .json()
-        .await
-        .map_err(|e| format!("invalid JSON from Lighthouse block_rewards: {e}"))?;
+    let block_rewards: Vec<Value> = block_rewards_res.json().await.map_err(|e| {
+        Error::server_error(format!("invalid JSON from Lighthouse block_rewards: {e}"))
+    })?;
 
     // Classify block rewards with blockprint.
     println!("sending to blockprint");
@@ -62,23 +81,22 @@ async fn classify(
         .json(&block_rewards)
         .send()
         .await
-        .map_err(|e| format!("Blockprint POST error: {e}"))?;
+        .map_err(|e| Error::server_error(format!("Blockprint POST error: {e}")))?;
 
     if !classifications_res.status().is_success() {
-        return Err(format!(
+        return Err(Error::server_error(format!(
             "error from blockprint: {}",
             classifications_res
                 .text()
                 .await
                 .unwrap_or_else(|_| "<body garbled>".into())
-        )
-        .into());
+        )));
     }
 
     let classifications: Vec<BlockprintClassification> = classifications_res
         .json()
         .await
-        .map_err(|e| format!("invalid JSON from blockprint: {e}"))?;
+        .map_err(|e| Error::server_error(format!("invalid JSON from blockprint: {e}")))?;
 
     // Record blockprint's accuracy.
     let mut tracker_guard = tracker.write().await;
@@ -99,11 +117,11 @@ async fn classify(
 /// Return statistics about classified blocks.
 async fn accuracy(
     Extension(tracker): Extension<Arc<RwLock<AccuracyTracker>>>,
-) -> Result<Json<Summary>> {
+) -> Result<Json<Summary>, Error> {
     if let Some(summary) = tracker.read().await.summarise() {
         Ok(Json(summary))
     } else {
-        Err("error computing accuracy".into())
+        Err(Error::server_error("error computing accuracy".into()))
     }
 }
 
@@ -123,11 +141,10 @@ async fn main() {
         .layer(Extension(tracker))
         .layer(Extension(conf.clone()));
 
-    let service = app.into_make_service();
-
-    let bind_futures = conf.listen_address.iter().map(|listen_address| {
+    let bind_futures = conf.listen_address.iter().map(|listen_address| async {
         let socket_addr = SocketAddr::new(listen_address.clone(), conf.port);
-        axum::Server::bind(&socket_addr).serve(service.clone())
+        let listener = TcpListener::bind(socket_addr).await?;
+        Ok::<_, std::io::Error>(axum::serve(listener, app.clone()))
     });
 
     futures::future::join_all(bind_futures)
